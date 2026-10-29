@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>원의 넓이 = 직사각형 체험실</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Pretendard', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 3px;
+        }
+        canvas {
+            touch-action: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 h-screen w-screen overflow-hidden flex flex-col">
+
+    <!-- Header / Navbar -->
+    <header class="h-14 bg-slate-800 border-b border-slate-700 px-4 flex items-center justify-between z-10 shrink-0">
+        <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-indigo-500/30">
+                <i class="fa-solid fa-shapes"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-base leading-tight text-white">원의 넓이 직사각형 변환 탐구실</h1>
+                <p class="text-xs text-slate-400">부채꼴 조각을 회전하고 맞물려 직사각형을 완성해보세요</p>
+            </div>
+        </div>
+
+        <!-- Top Action Controls -->
+        <div class="flex items-center space-x-2">
+            <button id="btnGrid" class="px-3 py-1.5 rounded-md text-xs font-medium bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-border-all"></i> 그리드: <span id="txtGridState" class="text-indigo-400">ON</span>
+            </button>
+            <button id="btnGuide" class="px-3 py-1.5 rounded-md text-xs font-medium bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-vector-square"></i> 가이드 라인: <span id="txtGuideState" class="text-emerald-400">ON</span>
+            </button>
+            <button id="btnAudio" class="px-3 py-1.5 rounded-md text-xs font-medium bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600 transition flex items-center gap-1.5">
+                <i id="iconAudio" class="fa-solid fa-volume-high text-indigo-400"></i> 효과음
+            </button>
+            <button id="btnReset" class="px-3 py-1.5 rounded-md text-xs font-medium bg-rose-600/80 hover:bg-rose-600 text-white transition flex items-center gap-1.5 shadow-sm">
+                <i class="fa-solid fa-rotate-left"></i> 초기화
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex overflow-hidden relative">
+
+        <!-- Left Tool Controller Drawer -->
+        <aside class="w-80 bg-slate-800/95 border-r border-slate-700 flex flex-col p-4 space-y-5 overflow-y-auto shrink-0 shadow-xl z-10 backdrop-blur">
+            
+            <!-- Step 1: Slice Config -->
+            <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700/80 space-y-3">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
+                        <span class="w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[10px]">1</span>
+                        원 분할 설정
+                    </span>
+                    <span id="lblSliceCount" class="text-xs font-bold bg-indigo-600 text-white px-2 py-0.5 rounded-full">8 조각</span>
+                </div>
+
+                <div class="space-y-1">
+                    <label for="sliderSlices" class="text-xs text-slate-300 flex justify-between">
+                        <span>조각 개수 선택</span>
+                        <span class="text-slate-400 text-[11px]">(4 ~ 64개)</span>
+                    </label>
+                    <input type="range" id="sliderSlices" min="4" max="64" step="2" value="8" class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                    <div class="flex justify-between text-[10px] text-slate-500 px-1">
+                        <span>4</span>
+                        <span>16</span>
+                        <span>32</span>
+                        <span>64</span>
+                    </div>
+                </div>
+
+                <button id="btnSliceCircle" class="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold text-xs rounded-lg shadow-md shadow-indigo-500/20 transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-scissors"></i> 원 조각내기
+                </button>
+            </div>
+
+            <!-- Step 2: Manipulation & Snapping Status -->
+            <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700/80 space-y-3">
+                <span class="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                    <span class="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-[10px]">2</span>
+                    조작 및 자석 조립
+                </span>
+
+                <p class="text-xs text-slate-300 leading-relaxed bg-slate-800/80 p-2.5 rounded-lg border border-slate-700/50">
+                    <i class="fa-solid fa-lightbulb text-amber-400 mr-1"></i>
+                    조각을 드래그하여 이동하고 상단 <strong>회전 핸들</strong>로 180도 뒤집어 맞물려 보세요. 이미 배치된 자리에는 중복해서 넣을 수 없습니다.
+                </p>
+
+                <!-- Selected Sector Properties -->
+                <div id="inspectorPanel" class="space-y-2 pt-1 border-t border-slate-800 opacity-60 pointer-events-none transition-opacity">
+                    <div class="flex justify-between items-center text-xs text-slate-400">
+                        <span>선택된 조각: <strong id="txtSelectedId" class="text-slate-200">없음</strong></span>
+                        <span id="txtSnapStatus" class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400">미결합</span>
+                    </div>
+
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs text-slate-300">
+                            <span>회전 각도</span>
+                            <span id="txtAngleVal" class="font-mono text-indigo-400">0°</span>
+                        </div>
+                        <input type="range" id="sliderAngle" min="0" max="360" value="0" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                        <button id="btnFlip180" class="py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded border border-slate-600 transition flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-rotate-right"></i> 180° 뒤집기
+                        </button>
+                        <button id="btnAlignUp" class="py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded border border-slate-600 transition flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-arrows-to-dot"></i> 정돈하기
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Auto Arrange Helper -->
+                <button id="btnAutoAssemble" class="w-full py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-2 mt-2">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> 자석 조립 가이드 / 자동 완성
+                </button>
+            </div>
+
+            <!-- Mathematical Explanation Box -->
+            <div class="bg-gradient-to-br from-indigo-950/40 to-slate-900/80 p-4 rounded-xl border border-indigo-500/30 space-y-2.5">
+                <span class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                    <i class="fa-solid fa-square-root-variable"></i> 원리 수식 정보
+                </span>
+                <div class="text-xs space-y-1.5 text-slate-300 font-mono">
+                    <div class="flex justify-between items-center bg-slate-800/60 px-2 py-1.5 rounded">
+                        <span class="text-slate-400">원주율:</span>
+                        <span class="text-indigo-300 font-bold">3.14</span>
+                    </div>
+                    <div class="flex justify-between items-center bg-slate-800/60 px-2 py-1.5 rounded">
+                        <span class="text-slate-400">직사각형 세로:</span>
+                        <span class="text-emerald-400 font-bold">반지름</span>
+                    </div>
+                    <div class="flex justify-between items-center bg-slate-800/60 px-2 py-1.5 rounded">
+                        <span class="text-slate-400">직사각형 가로:</span>
+                        <span class="text-amber-300 font-bold">반지름 × 3.14 (원주 ÷ 2)</span>
+                    </div>
+                    <div class="flex justify-between items-center bg-indigo-900/40 border border-indigo-500/30 px-2 py-2 rounded text-sm mt-1">
+                        <span class="text-indigo-200 font-sans font-semibold">원의 넓이:</span>
+                        <span class="text-amber-400 font-bold">반지름 × 반지름 × 3.14</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Assembly Progress Indicator -->
+            <div class="pt-2">
+                <div class="flex justify-between text-xs text-slate-400 mb-1">
+                    <span>직사각형 결합 진행도</span>
+                    <span id="txtProgress" class="font-bold text-indigo-400">0%</span>
+                </div>
+                <div class="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+                    <div id="barProgress" class="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 w-0 transition-all duration-300"></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Interactive Canvas Viewport -->
+        <main class="flex-1 relative bg-slate-950 overflow-hidden cursor-crosshair">
+            
+            <canvas id="mainCanvas" class="w-full h-full block"></canvas>
+
+            <!-- Alerts / Toasts -->
+            <div id="toastAlert" class="absolute top-6 left-1/2 -translate-x-1/2 bg-rose-500/90 text-white text-xs font-semibold px-4 py-2 rounded-full shadow-lg border border-rose-400/50 flex items-center gap-2 opacity-0 pointer-events-none transition-all duration-300 -translate-y-2 z-20">
+                <i class="fa-solid fa-circle-xmark"></i>
+                <span id="toastMsg">잘못된 방향입니다! 꼭짓점이 반대로 맞물리게 180도 뒤집어주세요.</span>
+            </div>
+
+            <div id="toastSuccess" class="absolute top-6 left-1/2 -translate-x-1/2 bg-emerald-500/90 text-white text-xs font-semibold px-4 py-2 rounded-full shadow-lg border border-emerald-400/50 flex items-center gap-2 opacity-0 pointer-events-none transition-all duration-300 -translate-y-2 z-20">
+                <i class="fa-solid fa-circle-check"></i>
+                <span>딱! 맞춰졌습니다! (자석 결합 완료)</span>
+            </div>
+
+            <!-- On-Canvas Overlay Hint -->
+            <div class="absolute bottom-4 right-4 bg-slate-800/80 backdrop-blur p-2 rounded-lg border border-slate-700 text-xs text-slate-400 flex items-center gap-3 z-10">
+                <span class="flex items-center gap-1"><i class="fa-solid fa-hand-pointer text-indigo-400"></i> 클릭/드래그: 이동</span>
+                <span class="flex items-center gap-1"><i class="fa-solid fa-arrows-spin text-amber-400"></i> 상단 핸들: 자유 회전</span>
+            </div>
+        </main>
+    </div>
+
+    <!-- Application Script -->
+    <script>
+        class AudioEffects {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) {
+                        this.ctx = new AudioContext();
+                    }
+                }
+            }
+            playSnap() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.exponentialRampToValueAtTime(120, now + 0.08);
+
+                gain.gain.setValueAtTime(0.7, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.08);
+            }
+            playReject() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(160, now);
+                osc.frequency.linearRampToValueAtTime(100, now + 0.12);
+
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.12);
+            }
+        }
+
+        const audioFX = new AudioEffects();
+
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let sliceCount = 8;
+        let radius = 100;
+        let sectors = [];
+        let selectedSector = null;
+        let isDragging = false;
+        let isRotating = false;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+        let initialAngle = 0;
+        let sectorAngleOffset = 0;
+
+        let showGrid = true;
+        let showGuide = true;
+
+        const colorUp = '#38bdf8';
+        const colorDown = '#fb923c';
+
+        class Sector {
+            constructor(id, totalSlices, index) {
+                this.id = id;
+                this.totalSlices = totalSlices;
+                this.index = index;
+                this.angleSpan = (Math.PI * 2) / totalSlices;
+
+                this.x = 0;
+                this.y = 0;
+                this.rotation = 0; 
+                
+                this.isEven = (index % 2 === 0);
+                this.fillColor = this.isEven ? colorUp : colorDown;
+
+                this.snappedSlot = -1;
+                this.isLocked = false;
+            }
+
+            draw(ctx, isSelected) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.arc(0, 0, radius, -this.angleSpan / 2, this.angleSpan / 2);
+                ctx.closePath();
+
+                ctx.fillStyle = this.fillColor;
+                ctx.fill();
+
+                ctx.lineWidth = this.isLocked ? 2 : 1.5;
+                ctx.strokeStyle = this.isLocked ? '#10b981' : '#ffffff';
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(0, 0, 3.5, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+
+                if (this.totalSlices <= 32) {
+                    ctx.save();
+                    const labelDist = radius * 0.55;
+                    ctx.fillStyle = '#1e293b';
+                    ctx.font = 'bold 11px Pretendard';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(this.index + 1, labelDist, 0);
+                    ctx.restore();
+                }
+
+                if (isSelected && !this.isLocked) {
+                    this.drawBoundingBox(ctx);
+                }
+
+                ctx.restore();
+            }
+
+            drawBoundingBox(ctx) {
+                const boxMargin = 10;
+                const minX = -boxMargin;
+                const maxX = radius + boxMargin;
+                const maxY = radius * Math.sin(this.angleSpan / 2) + boxMargin;
+                const minY = -maxY;
+
+                ctx.strokeStyle = '#6366f1';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([4, 4]);
+                ctx.strokeRect(minX, minY, maxX - minX, maxY - minY);
+                ctx.setLineDash([]);
+
+                const handleSize = 6;
+                ctx.fillStyle = '#ffffff';
+                ctx.strokeStyle = '#6366f1';
+                
+                [ {x: minX, y: minY}, {x: maxX, y: minY}, {x: maxX, y: maxY}, {x: minX, y: maxY} ].forEach(p => {
+                    ctx.fillRect(p.x - handleSize/2, p.y - handleSize/2, handleSize, handleSize);
+                    ctx.strokeRect(p.x - handleSize/2, p.y - handleSize/2, handleSize, handleSize);
+                });
+
+                const topCenterX = (minX + maxX) / 2;
+                const handleDist = 26;
+
+                ctx.beginPath();
+                ctx.moveTo(topCenterX, minY);
+                ctx.lineTo(topCenterX, minY - handleDist);
+                ctx.strokeStyle = '#6366f1';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(topCenterX, minY - handleDist, 7, 0, Math.PI * 2);
+                ctx.fillStyle = '#818cf8';
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+
+            containsPoint(px, py) {
+                const dx = px - this.x;
+                const dy = py - this.y;
+                
+                const localX = dx * Math.cos(-this.rotation) - dy * Math.sin(-this.rotation);
+                const localY = dx * Math.sin(-this.rotation) + dy * Math.cos(-this.rotation);
+
+                const dist = Math.hypot(localX, localY);
+                if (dist > radius) return false;
+
+                let angle = Math.atan2(localY, localX);
+                return angle >= -this.angleSpan / 2 && angle <= this.angleSpan / 2;
+            }
+
+            getRotationHandlePos() {
+                const boxMargin = 10;
+                const minY = -(radius * Math.sin(this.angleSpan / 2) + boxMargin);
+                const minX = -boxMargin;
+                const maxX = radius + boxMargin;
+                const topCenterX = (minX + maxX) / 2;
+                const handleDist = 26;
+
+                const localX = topCenterX;
+                const localY = minY - handleDist;
+
+                const globalX = this.x + localX * Math.cos(this.rotation) - localY * Math.sin(this.rotation);
+                const globalY = this.y + localX * Math.sin(this.rotation) + localY * Math.cos(this.rotation);
+
+                return { x: globalX, y: globalY };
+            }
+        }
+
+        function getTargetSlots() {
+            const slots = [];
+            const sectorAngle = (Math.PI * 2) / sliceCount;
+            const sectorWidth = radius * Math.sin(sectorAngle / 2) * 2;
+            
+            const totalWidth = (sliceCount / 2) * sectorWidth;
+            const startX = (canvas.width - totalWidth) / 2 + sectorWidth / 2;
+            const startY = canvas.height * 0.65;
+
+            for (let i = 0; i < sliceCount; i++) {
+                const isPointingDown = (i % 2 === 1);
+                
+                const x = startX + Math.floor(i / 2) * sectorWidth + (isPointingDown ? sectorWidth / 2 : 0);
+                const y = isPointingDown ? startY - radius : startY;
+                const targetRotation = isPointingDown ? Math.PI / 2 : -Math.PI / 2;
+
+                slots.push({
+                    index: i,
+                    x: x,
+                    y: y,
+                    targetRotation: targetRotation,
+                    isPointingDown: isPointingDown
+                });
+            }
+            return slots;
+        }
+
+        function initSlices() {
+            sectors = [];
+            selectedSector = null;
+            updateInspector();
+
+            const angleStep = (Math.PI * 2) / sliceCount;
+            const circleCenterX = Math.max(canvas.width * 0.3, 180);
+            const circleCenterY = Math.max(canvas.height * 0.32, 160);
+
+            for (let i = 0; i < sliceCount; i++) {
+                const s = new Sector(i, sliceCount, i);
+                s.x = circleCenterX;
+                s.y = circleCenterY;
+                s.rotation = i * angleStep;
+                sectors.push(s);
+            }
+            updateProgress();
+        }
+
+        function sliceCircle() {
+            const angleStep = (Math.PI * 2) / sliceCount;
+            const centerX = Math.max(canvas.width * 0.3, 180);
+            const centerY = Math.max(canvas.height * 0.32, 160);
+
+            sectors.forEach((s, i) => {
+                s.isLocked = false;
+                s.snappedSlot = -1;
+                
+                const offsetDist = Math.min(canvas.width, canvas.height) * 0.15;
+                const spreadAngle = i * angleStep;
+                s.x = centerX + Math.cos(spreadAngle) * offsetDist;
+                s.y = centerY + Math.sin(spreadAngle) * offsetDist;
+                s.rotation = spreadAngle;
+            });
+
+            audioFX.playSnap();
+            updateProgress();
+            render();
+        }
+
+        function autoAssemble() {
+            const slots = getTargetSlots();
+            
+            sectors.forEach((s, i) => {
+                const slot = slots[i];
+                s.x = slot.x;
+                s.y = slot.y;
+                s.rotation = slot.targetRotation;
+                s.isLocked = true;
+                s.snappedSlot = i;
+            });
+
+            audioFX.playSnap();
+            showSuccessToast();
+            updateProgress();
+            render();
+        }
+
+        function checkSnapping(sector) {
+            if (!sector || sector.isLocked) return;
+
+            const slots = getTargetSlots();
+            const snapDistThreshold = 40;
+            const angleThreshold = 0.4;
+
+            let closestSlot = null;
+            let minDist = Infinity;
+
+            slots.forEach(slot => {
+                const dist = Math.hypot(sector.x - slot.x, sector.y - slot.y);
+                if (dist < minDist) {
+                    minDist = dist;
+                    closestSlot = slot;
+                }
+            });
+
+            if (closestSlot && minDist < snapDistThreshold) {
+                // Check if the target slot is ALREADY OCCUPIED by another piece
+                const isOccupied = sectors.some(s => s !== sector && s.snappedSlot === closestSlot.index);
+
+                if (isOccupied) {
+                    audioFX.playReject();
+                    showToast('이미 다른 조각이 들어간 자리입니다! 다른 빈 슬롯을 찾아보세요.');
+                    sector.x += (sector.x - closestSlot.x) * 0.35 + 10;
+                    sector.y += (sector.y - closestSlot.y) * 0.35 + 10;
+                    return;
+                }
+
+                const normAngle = (sector.rotation % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+                const normTargetAngle = (closestSlot.targetRotation % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+
+                let angleDiff = Math.abs(normAngle - normTargetAngle);
+                if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
+
+                if (angleDiff < angleThreshold) {
+                    // Success snap into empty slot
+                    sector.x = closestSlot.x;
+                    sector.y = closestSlot.y;
+                    sector.rotation = closestSlot.targetRotation;
+                    sector.isLocked = true;
+                    sector.snappedSlot = closestSlot.index;
+
+                    audioFX.playSnap();
+                    showSuccessToast();
+                    updateProgress();
+                } else {
+                    audioFX.playReject();
+                    showToast('잘못된 방향입니다! 꼭짓점이 반대로 맞물리게 180도 뒤집어주세요.');
+                    sector.x += (sector.x - closestSlot.x) * 0.3;
+                    sector.y += (sector.y - closestSlot.y) * 0.3;
+                }
+            }
+        }
+
+        function updateProgress() {
+            const lockedCount = sectors.filter(s => s.isLocked).length;
+            const percent = Math.round((lockedCount / sliceCount) * 100);
+            
+            document.getElementById('txtProgress').innerText = `${percent}%`;
+            document.getElementById('barProgress').style.width = `${percent}%`;
+        }
+
+        let toastTimeout;
+        function showToast(msg) {
+            const toast = document.getElementById('toastAlert');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.style.opacity = '1';
+            toast.style.transform = 'translate(-50%, 0)';
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translate(-50%, -8px)';
+            }, 3000);
+        }
+
+        function showSuccessToast() {
+            const toast = document.getElementById('toastSuccess');
+            toast.style.opacity = '1';
+            toast.style.transform = 'translate(-50%, 0)';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translate(-50%, -8px)';
+            }, 2000);
+        }
+
+        function render() {
+            if (!canvas.width || !canvas.height) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (showGrid) drawGrid();
+            if (showGuide) drawTargetGuide();
+
+            sectors.forEach(sector => {
+                if (sector !== selectedSector) {
+                    sector.draw(ctx, false);
+                }
+            });
+
+            if (selectedSector) {
+                selectedSector.draw(ctx, true);
+            }
+        }
+
+        function drawGrid() {
+            const gridSize = 30;
+            ctx.save();
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1;
+
+            for (let x = 0; x < canvas.width; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        function drawTargetGuide() {
+            const slots = getTargetSlots();
+            if (slots.length === 0) return;
+
+            const sectorAngle = (Math.PI * 2) / sliceCount;
+            const sectorWidth = radius * Math.sin(sectorAngle / 2) * 2;
+            const totalWidth = (sliceCount / 2) * sectorWidth;
+            
+            const startX = slots[0].x - sectorWidth / 2;
+            const bottomY = slots[0].y;
+            const topY = bottomY - radius;
+
+            ctx.save();
+            ctx.strokeStyle = 'rgba(52, 211, 153, 0.4)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([6, 6]);
+            ctx.strokeRect(startX, topY, totalWidth, radius);
+
+            ctx.font = '12px Pretendard';
+            ctx.fillStyle = '#34d399';
+            ctx.textAlign = 'center';
+
+            ctx.save();
+            ctx.translate(startX - 18, topY + radius / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText(`세로 = 반지름`, 0, 0);
+            ctx.restore();
+
+            ctx.fillText(`가로 = 원주의 절반 (반지름 × 3.14)`, startX + totalWidth / 2, bottomY + 24);
+
+            slots.forEach(s => {
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, 4, 0, Math.PI * 2);
+                ctx.fillStyle = s.isPointingDown ? 'rgba(251, 146, 60, 0.3)' : 'rgba(56, 189, 248, 0.3)';
+                ctx.fill();
+            });
+
+            ctx.restore();
+        }
+
+        function getCanvasCoordinates(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
+            };
+        }
+
+        function onPointerDown(e) {
+            const pos = getCanvasCoordinates(e);
+
+            if (selectedSector && !selectedSector.isLocked) {
+                const handlePos = selectedSector.getRotationHandlePos();
+                const distToHandle = Math.hypot(pos.x - handlePos.x, pos.y - handlePos.y);
+
+                if (distToHandle <= 14) {
+                    isRotating = true;
+                    initialAngle = Math.atan2(pos.y - selectedSector.y, pos.x - selectedSector.x);
+                    sectorAngleOffset = selectedSector.rotation;
+                    return;
+                }
+            }
+
+            let clicked = null;
+            for (let i = sectors.length - 1; i >= 0; i--) {
+                if (sectors[i].containsPoint(pos.x, pos.y)) {
+                    clicked = sectors[i];
+                    break;
+                }
+            }
+
+            if (clicked) {
+                selectedSector = clicked;
+                if (!clicked.isLocked) {
+                    isDragging = true;
+                    dragOffsetX = pos.x - clicked.x;
+                    dragOffsetY = pos.y - clicked.y;
+                }
+            } else {
+                selectedSector = null;
+            }
+
+            updateInspector();
+            render();
+        }
+
+        function onPointerMove(e) {
+            const pos = getCanvasCoordinates(e);
+
+            if (isRotating && selectedSector) {
+                const currentAngle = Math.atan2(pos.y - selectedSector.y, pos.x - selectedSector.x);
+                selectedSector.rotation = sectorAngleOffset + (currentAngle - initialAngle);
+                updateInspector();
+                render();
+                return;
+            }
+
+            if (isDragging && selectedSector && !selectedSector.isLocked) {
+                selectedSector.x = pos.x - dragOffsetX;
+                selectedSector.y = pos.y - dragOffsetY;
+                render();
+            }
+        }
+
+        function onPointerUp() {
+            if (isDragging && selectedSector) {
+                checkSnapping(selectedSector);
+            }
+            isDragging = false;
+            isRotating = false;
+            render();
+        }
+
+        function updateInspector() {
+            const panel = document.getElementById('inspectorPanel');
+            const txtId = document.getElementById('txtSelectedId');
+            const txtAngle = document.getElementById('txtAngleVal');
+            const sliderAngle = document.getElementById('sliderAngle');
+            const txtStatus = document.getElementById('txtSnapStatus');
+
+            if (selectedSector) {
+                panel.classList.remove('opacity-60', 'pointer-events-none');
+                txtId.innerText = `${selectedSector.index + 1}번 부채꼴`;
+
+                const deg = Math.round((selectedSector.rotation * 180 / Math.PI) % 360 + 360) % 360;
+                txtAngle.innerText = `${deg}°`;
+                sliderAngle.value = deg;
+
+                if (selectedSector.isLocked) {
+                    txtStatus.innerText = '자석 결합 완료';
+                    txtStatus.className = 'text-[10px] px-2 py-0.5 rounded bg-emerald-900/60 text-emerald-300 font-bold';
+                } else {
+                    txtStatus.innerText = '미결합';
+                    txtStatus.className = 'text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400';
+                }
+            } else {
+                panel.classList.add('opacity-60', 'pointer-events-none');
+                txtId.innerText = '없음';
+                txtAngle.innerText = '0°';
+                txtStatus.innerText = '미결합';
+                txtStatus.className = 'text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400';
+            }
+        }
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            if (!container) return;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            radius = Math.min(canvas.width, canvas.height) * 0.22;
+            radius = Math.max(70, Math.min(130, radius));
+            render();
+        }
+
+        window.addEventListener('load', () => {
+            resizeCanvas();
+            initSlices();
+
+            window.addEventListener('resize', () => {
+                resizeCanvas();
+            });
+
+            canvas.addEventListener('mousedown', onPointerDown);
+            canvas.addEventListener('mousemove', onPointerMove);
+            window.addEventListener('mouseup', onPointerUp);
+
+            canvas.addEventListener('touchstart', (e) => { onPointerDown(e); e.preventDefault(); }, { passive: false });
+            canvas.addEventListener('touchmove', (e) => { onPointerMove(e); e.preventDefault(); }, { passive: false });
+            window.addEventListener('touchend', onPointerUp);
+
+            document.getElementById('sliderSlices').addEventListener('input', (e) => {
+                sliceCount = parseInt(e.target.value);
+                document.getElementById('lblSliceCount').innerText = `${sliceCount} 조각`;
+                initSlices();
+                render();
+            });
+
+            document.getElementById('btnSliceCircle').addEventListener('click', () => {
+                sliceCircle();
+            });
+
+            document.getElementById('btnAutoAssemble').addEventListener('click', () => {
+                autoAssemble();
+            });
+
+            document.getElementById('sliderAngle').addEventListener('input', (e) => {
+                if (selectedSector && !selectedSector.isLocked) {
+                    const rad = (parseInt(e.target.value) * Math.PI) / 180;
+                    selectedSector.rotation = rad;
+                    document.getElementById('txtAngleVal').innerText = `${e.target.value}°`;
+                    render();
+                }
+            });
+
+            document.getElementById('btnFlip180').addEventListener('click', () => {
+                if (selectedSector && !selectedSector.isLocked) {
+                    selectedSector.rotation += Math.PI;
+                    updateInspector();
+                    render();
+                }
+            });
+
+            document.getElementById('btnAlignUp').addEventListener('click', () => {
+                if (selectedSector && !selectedSector.isLocked) {
+                    selectedSector.rotation = -Math.PI / 2;
+                    updateInspector();
+                    render();
+                }
+            });
+
+            document.getElementById('btnGrid').addEventListener('click', () => {
+                showGrid = !showGrid;
+                document.getElementById('txtGridState').innerText = showGrid ? 'ON' : 'OFF';
+                document.getElementById('txtGridState').className = showGrid ? 'text-indigo-400' : 'text-slate-400';
+                render();
+            });
+
+            document.getElementById('btnGuide').addEventListener('click', () => {
+                showGuide = !showGuide;
+                document.getElementById('txtGuideState').innerText = showGuide ? 'ON' : 'OFF';
+                document.getElementById('txtGuideState').className = showGuide ? 'text-emerald-400' : 'text-slate-400';
+                render();
+            });
+
+            document.getElementById('btnAudio').addEventListener('click', () => {
+                audioFX.enabled = !audioFX.enabled;
+                const icon = document.getElementById('iconAudio');
+                icon.className = audioFX.enabled ? 'fa-solid fa-volume-high text-indigo-400' : 'fa-solid fa-volume-xmark text-slate-500';
+            });
+
+            document.getElementById('btnReset').addEventListener('click', () => {
+                initSlices();
+                render();
+            });
+        });
+    </script>
+</body>
+</html>
